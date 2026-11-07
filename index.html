@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>นักคิดค่าไฟตัวจิ๋ว 3D | สื่อการเรียนรู้ ม.3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#eaf0ff;--muted:#9fabd6;--blue:#4d7cff;--cyan:#25c6d6;--pink:#ff6fae;--yellow:#ffd45c;--green:#2ed3a0;--bg:#080d26;--glass:rgba(16,24,60,.62);--glass2:rgba(255,255,255,.07);--line:rgba(255,255,255,.14)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:"Noto Sans Thai","Sarabun","Segoe UI",system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--ink);overflow:hidden}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 470px;height:100vh;height:100dvh}
+.stage{position:relative;overflow:hidden;background:radial-gradient(ellipse at 50% 38%,#1d2d78 0%,#101a52 38%,#080d26 78%)}
+#gl{position:absolute;inset:0;width:100%;height:100%;display:block;outline:none;touch-action:none}
+.hud{position:absolute;z-index:4;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.hud.top{top:14px;left:14px;right:14px;justify-content:space-between;pointer-events:none}
+.hud.bottom{right:14px;bottom:14px;justify-content:flex-end}
+.chip3d{pointer-events:auto;display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:99px;background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);font-weight:700;font-size:14px;box-shadow:0 8px 30px #0005}
+.chip3d b{color:var(--cyan);font-size:17px}
+.chip3d .bill{color:var(--green)}
+.hint{font-size:12.5px;color:var(--muted);font-weight:600;padding:8px 13px;border-radius:99px;background:rgba(8,13,38,.5);border:1px solid var(--line);backdrop-filter:blur(10px)}
+.hbtn{border:1px solid var(--line);background:var(--glass);color:var(--ink);padding:9px 14px;border-radius:12px;font:inherit;font-weight:700;font-size:13px;cursor:pointer;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);transition:.2s}
+.hbtn:hover{background:rgba(77,124,255,.4);transform:translateY(-1px)}
+.hbtn.active{background:linear-gradient(135deg,#4d7cff,#8a5cf0);border-color:transparent}
+#hotspots{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden}
+#hotspots.hidden{display:none}
+.hot{position:absolute;left:0;top:0;border:0;background:none;padding:0;cursor:pointer;pointer-events:auto;will-change:transform;font:inherit;color:inherit}
+.hot .dot{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.16);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1.5px solid rgba(255,255,255,.75);font-size:19px;box-shadow:0 8px 22px #0007;position:relative;transition:transform .25s,background .25s}
+.hot .dot::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(37,198,214,.8);animation:ping 2.2s ease-out infinite}
+@keyframes ping{0%{transform:scale(.75);opacity:.95}100%{transform:scale(1.55);opacity:0}}
+.hot .tag{position:absolute;left:50%;top:48px;transform:translateX(-50%) translateY(-5px);white-space:nowrap;background:rgba(8,13,38,.9);color:#fff;font-size:12px;font-weight:700;padding:5px 10px;border-radius:99px;opacity:0;pointer-events:none;transition:.22s;border:1px solid var(--line)}
+.hot:hover .tag,.hot:focus-visible .tag,.hot.on .tag{opacity:1;transform:translateX(-50%) translateY(0)}
+.hot:hover .dot{transform:scale(1.12)}
+.hot.on .dot{background:linear-gradient(135deg,var(--cyan),var(--pink));transform:scale(1.18);border-color:#fff}
+.infocard{position:absolute;z-index:6;left:16px;bottom:16px;width:min(370px,calc(100% - 32px));max-height:68%;overflow:auto;padding:18px;border-radius:22px;background:linear-gradient(160deg,rgba(30,42,100,.82),rgba(14,20,56,.82));border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(22px) saturate(140%);-webkit-backdrop-filter:blur(22px) saturate(140%);box-shadow:0 24px 60px #000a,inset 0 1px 0 rgba(255,255,255,.18)}
+.infocard[hidden]{display:none}
+.infocard.pop{animation:cardIn .5s cubic-bezier(.2,1.1,.3,1)}
+@keyframes cardIn{0%{opacity:0;transform:translateY(24px) scale(.92)}100%{opacity:1;transform:none}}
+.infocard .close{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.1);color:#fff;cursor:pointer;font-size:13px}
+.infocard .close:hover{background:rgba(255,111,174,.5)}
+.ic-head{display:flex;gap:12px;align-items:center;margin-bottom:8px;padding-right:26px}
+.ic-emoji{width:50px;height:50px;border-radius:16px;display:grid;place-items:center;font-size:27px;background:rgba(255,255,255,.1);border:1px solid var(--line);flex:none}
+.ic-head small{color:var(--cyan);font-weight:800;letter-spacing:.04em;font-size:11.5px}
+.ic-head h3{margin:0;font-size:20px}
+.infocard p{margin:6px 0 12px;line-height:1.65;color:#d5ddf8;font-size:14px}
+.ic-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ic-stats div{padding:10px 12px;border-radius:13px;background:rgba(255,255,255,.07);border:1px solid var(--line)}
+.ic-stats span{display:block;font-size:11.5px;color:var(--muted);font-weight:600}
+.ic-stats b{font-size:17px;color:#fff}
+.ic-bar{height:8px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden;margin-top:10px}
+.ic-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--cyan),var(--pink));transition:width .6s}
+.ic-tip{margin-top:12px;padding:10px 12px;border-radius:13px;background:rgba(255,212,92,.12);border-left:4px solid var(--yellow);font-size:13.5px;line-height:1.6;color:#fff3c8}
+.panel{display:flex;flex-direction:column;min-height:0;background:linear-gradient(180deg,rgba(18,27,70,.96),rgba(9,14,40,.98));border-left:1px solid var(--line);position:relative;z-index:8}
+.brand{padding:20px 22px 12px}
+.brand h1{margin:0;font-size:25px;line-height:1.25;background:linear-gradient(100deg,#fff,#9fc0ff 50%,#ffb3d6);-webkit-background-clip:text;background-clip:text;color:transparent}
+.brand p{margin:5px 0 0;color:var(--muted);font-size:13.5px}
+nav{display:flex;gap:8px;overflow:auto;padding:6px 18px 12px;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{white-space:nowrap;border:1px solid var(--line);border-radius:99px;padding:9px 15px;background:var(--glass2);color:var(--ink);font:inherit;font-weight:700;font-size:13.5px;cursor:pointer;transition:.22s}
+nav button:hover{background:rgba(255,255,255,.14)}
+nav button.active{background:linear-gradient(135deg,#4d7cff,#8a5cf0 60%,#e76ba9);border-color:transparent;box-shadow:0 8px 22px #4d7cff55}
+.content{flex:1;overflow:auto;padding:4px 18px 18px;scrollbar-width:thin;scrollbar-color:#4a5aa0 transparent}
+section.sec{display:none}
+section.sec.active{display:block;animation:slide .5s cubic-bezier(.2,.9,.3,1)}
+@keyframes slide{0%{opacity:0;transform:translateX(26px)}100%{opacity:1;transform:none}}
+h2{margin:6px 0 10px;font-size:22px}
+h3{margin:18px 0 8px;font-size:16.5px}
+.lead{color:var(--muted);line-height:1.75;font-size:14.5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:11px}
+.tile{border-radius:16px;padding:14px;background:var(--glass2);border:1px solid var(--line);position:relative;transition:.25s}
+.tile p{margin:6px 0 0;font-size:13.5px;line-height:1.6;color:#cfd8f5}
+button.tile{text-align:left;font:inherit;color:inherit;cursor:pointer;width:100%}
+button.tile:hover{transform:translateY(-3px);background:rgba(255,255,255,.12);border-color:rgba(37,198,214,.7)}
+.tile .go{display:block;margin-top:8px;font-size:11.5px;color:var(--cyan);font-weight:800}
+.big{font-size:27px;font-weight:800;background:linear-gradient(120deg,#7ea2ff,#25c6d6);-webkit-background-clip:text;background-clip:text;color:transparent}
+.formula{padding:14px;border-radius:14px;background:linear-gradient(135deg,rgba(77,124,255,.35),rgba(138,92,240,.3));border:1px solid rgba(255,255,255,.2);color:#fff;font-weight:700;line-height:1.8;overflow-wrap:anywhere;font-size:14.5px}
+.note{background:rgba(255,212,92,.12);border-left:5px solid var(--yellow);padding:12px 14px;border-radius:11px;line-height:1.7;font-size:13.5px;color:#fff1c2}
+ul{padding-left:20px;line-height:1.8;font-size:14px;color:#d5ddf8}
+.controls{display:grid;grid-template-columns:1fr;gap:10px;margin:12px 0}
+.control{padding:12px 14px;border-radius:14px;background:var(--glass2);border:1px solid var(--line)}
+.control label{display:flex;justify-content:space-between;gap:8px;font-weight:700;font-size:14px;margin-bottom:6px}
+.control input[type=range]{width:100%;accent-color:var(--cyan)}
+input[type=number]{width:74px;max-width:100%;padding:7px 8px;border:1px solid rgba(255,255,255,.25);border-radius:9px;font:inherit;background:rgba(255,255,255,.08);color:#fff}
+input[type=number]:focus{outline:2px solid var(--cyan);border-color:transparent}
+.appliance{display:flex;flex-direction:column;gap:8px;padding:11px;margin-bottom:9px;border-radius:15px;background:var(--glass2);border:1px solid var(--line);transition:.25s}
+.appliance.sel{border-color:var(--cyan);background:rgba(37,198,214,.12);box-shadow:0 0 0 1px var(--cyan)}
+.aname{display:flex;align-items:center;gap:10px;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;padding:0}
+.ae{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:20px;flex:none}
+.aname strong{display:block;font-size:14.5px}
+.aname small{color:var(--muted);font-size:11.5px}
+.ainputs{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:#d5ddf8}
+.ainputs label{display:flex;align-items:center;gap:6px}
+.result{font-size:clamp(26px,4vw,34px);font-weight:900;color:var(--green)}
+.pill{display:inline-block;padding:4px 10px;background:rgba(46,211,160,.16);color:#6ff0c4;border-radius:99px;font-size:12px;font-weight:800}
+.bar{height:16px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden}
+.bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--blue),var(--pink));transition:width .35s}
+.legend{font-size:12.5px;color:var(--muted)}
+.chart{width:100%;height:245px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.04)}
+#breakdown{line-height:1.85;font-size:14px}
+#breakdown hr{border:0;border-top:1px solid var(--line)}
+button.action{border:0;background:linear-gradient(135deg,#4d7cff,#8a5cf0);color:#fff;padding:11px 18px;border-radius:12px;font:inherit;font-weight:800;cursor:pointer;transition:.2s;box-shadow:0 8px 22px #4d7cff44}
+button.action:hover{transform:translateY(-2px)}
+button.secondary{background:rgba(255,255,255,.12);box-shadow:none}
+.quizitem{padding:13px;border:1px solid var(--line);border-radius:15px;margin:10px 0;background:var(--glass2)}
+.quizitem>b{line-height:1.6;font-size:14.5px}
+.opt{display:block;padding:9px 11px;margin-top:7px;border:1px solid var(--line);border-radius:11px;cursor:pointer;font-size:14px;transition:.2s}
+.opt:hover{background:rgba(255,255,255,.1)}
+.opt:has(input:checked){background:rgba(77,124,255,.3);border-color:var(--blue)}
+.opt input{accent-color:var(--cyan);margin-right:6px}
+.drop{min-height:43px;border:2px dashed rgba(159,171,214,.6);border-radius:11px;padding:9px;margin-top:7px;background:rgba(255,255,255,.04);font-size:13.5px;color:#cfd8f5;transition:.2s}
+.drop:hover,.drop:focus-visible{border-color:var(--cyan);outline:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.chip{padding:9px 12px;background:rgba(77,124,255,.22);border:1px solid rgba(126,162,255,.5);border-radius:11px;cursor:grab;font-weight:700;font-size:13px;touch-action:manipulation;transition:.2s;user-select:none}
+.chip:hover{transform:translateY(-2px)}
+.chip.selected{outline:3px solid var(--pink);background:rgba(255,111,174,.25)}
+.chip.used{opacity:.4}
+.feedback{font-weight:800;margin-top:8px;font-size:14px}
+.correct{color:#4be8b5}
+.wrong{color:#ff7ea6}
+.footer{font-size:12.5px;color:var(--muted);line-height:1.8;padding:14px 2px 4px;border-top:1px solid var(--line);margin-top:18px}
+.footer a{color:#8fb2ff}
+@media(max-width:1000px){
+body{overflow:auto}
+.app{display:block;height:auto}
+.stage{position:sticky;top:0;z-index:20;height:46vh;min-height:300px}
+.panel{min-height:60vh;border-left:0;border-top:1px solid var(--line)}
+.content{overflow:visible}
+.hint{display:none}
+.infocard{max-height:80%;padding:14px}
+}
+@media(max-width:600px){
+.brand h1{font-size:21px}
+.chip3d{padding:7px 11px;font-size:12.5px}
+.hbtn{padding:7px 10px;font-size:12px}
+.hot .dot{width:34px;height:34px;font-size:16px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="stage" id="stage">
+<canvas id="gl" aria-label="ฉาก 3D ห้องทดลองพลังงานไฟฟ้า"></canvas>
+<div id="hotspots"></div>
+<div class="hud top">
+<div class="chip3d">⚡ <b id="hudUnits">0</b> หน่วย &nbsp;•&nbsp; <span class="bill">฿<b id="hudBill" style="color:var(--green)">0</b></span></div>
+<div class="hint">🖱️ ลาก = หมุน &nbsp;|&nbsp; คลิกขวาลาก = แพน &nbsp;|&nbsp; ล้อเมาส์ = ซูม</div>
+</div>
+<div class="hud bottom">
+<button class="hbtn" id="btnHot">📍 จุดอธิบาย</button>
+<button class="hbtn" id="btnSpin">🔄 หมุนอัตโนมัติ</button>
+<button class="hbtn" id="btnReset">🎯 รีเซ็ตมุมมอง</button>
+</div>
+<div class="infocard" id="infoCard" hidden>
+<button class="close" id="closeCard" aria-label="ปิดการ์ด">✕</button>
+<div class="ic-head"><div class="ic-emoji" id="icEmoji"></div><div><small id="icKicker"></small><h3 id="icTitle"></h3></div></div>
+<p id="icDesc"></p>
+<div class="ic-stats" id="icStats"></div>
+<div class="ic-bar" id="icBarWrap"><i id="icBar"></i></div>
+<div class="ic-tip" id="icTip"></div>
+</div>
+</div>
+<aside class="panel">
+<div class="brand"><h1>⚡ นักคิดค่าไฟตัวจิ๋ว 3D</h1><p>เรียนรู้ ทดลอง และวิเคราะห์การใช้พลังงานไฟฟ้า | วิทยาศาสตร์ ม.3</p></div>
+<nav id="nav">
+<button class="active" data-tab="learn">📚 เรียนรู้</button><button data-tab="lab">🧪 ห้องทดลองค่าไฟ</button><button data-tab="game">🧩 เกมลากคำตอบ 10 ข้อ</button><button data-tab="quiz">🏆 แบบทดสอบ 5 ข้อ</button>
+</nav>
+<div class="content">
+<section id="learn" class="sec active">
+<h2>📚 รู้จักไฟฟ้าที่เราใช้</h2>
+<p class="lead">ไฟฟ้าที่ใช้ในบ้านวัดเป็น <b>กิโลวัตต์-ชั่วโมง (kWh)</b> หรือที่เรียกกันว่า “หน่วย” มิเตอร์จะบันทึกพลังงานไฟฟ้าที่เครื่องใช้ไฟฟ้าทุกชนิดใช้รวมกัน แตะการ์ดด้านล่างเพื่อให้กล้องบินไปดูวัตถุในฉาก 3D</p>
+<div class="grid">
+<button class="tile" data-focus="1"><div class="big">W</div><b>กำลังไฟฟ้า</b><p>บอกอัตราการใช้พลังงานของเครื่องใช้ไฟฟ้า หน่วยเป็นวัตต์ (W)</p><span class="go">ดูพัดลมใน 3D ▸</span></button>
+<button class="tile" data-focus="6"><div class="big">kWh</div><b>พลังงานไฟฟ้า</b><p>พลังงานที่ใช้จริง คำนวณจากกำลังไฟฟ้าและเวลา</p><span class="go">ดูมิเตอร์ใน 3D ▸</span></button>
+<button class="tile" data-focus="6"><div class="big">Ft</div><b>ค่าไฟฟ้าผันแปร</b><p>ค่าไฟส่วนที่ปรับเปลี่ยนตามต้นทุนระบบไฟฟ้าในแต่ละงวด</p><span class="go">ดูมิเตอร์ใน 3D ▸</span></button>
+<button class="tile" data-focus="6"><div class="big">7%</div><b>ภาษีมูลค่าเพิ่ม</b><p>คำนวณจากค่าไฟฟ้าฐานรวมค่า Ft และค่าบริการตามหลักเกณฑ์บิล</p><span class="go">ดูมิเตอร์ใน 3D ▸</span></button>
+</div>
+<h3>1. สูตรหาพลังงานไฟฟ้า</h3><div class="formula">พลังงานไฟฟ้า (หน่วย) = [กำลังไฟฟ้า (วัตต์) × เวลา (ชั่วโมง)] ÷ 1,000</div>
+<p class="lead">ตัวอย่าง: พัดลม 60 W เปิดวันละ 5 ชั่วโมง เป็นเวลา 30 วัน</p><div class="formula">(60 × 5 × 30) ÷ 1,000 = 9 หน่วย (kWh)</div>
+<h3>2. ค่าไฟฟ้าคิดจากอะไรบ้าง?</h3>
+<ul><li><b>ค่าพลังงานไฟฟ้าฐาน:</b> คิดตามจำนวนหน่วยที่ใช้แบบอัตราก้าวหน้า (ใช้มากขึ้น หน่วยส่วนเกินอาจมีราคาต่อหน่วยสูงขึ้น)</li><li><b>ค่าบริการรายเดือน:</b> ค่าบริการตามประเภทผู้ใช้ไฟฟ้า</li><li><b>ค่า Ft:</b> จำนวนหน่วย × ค่า Ft ของงวดนั้น</li><li><b>VAT:</b> ภาษีมูลค่าเพิ่ม 7% ตามฐานภาษีในใบแจ้งค่าไฟ</li></ul>
+<h3>3. ตัวอย่างอัตราค่าไฟบ้าน (เพื่อการเรียนรู้)</h3>
+<p class="lead">ตัวอย่างอัตราค่าพลังงานบ้านอยู่อาศัยประเภท 1.2 ซึ่งใช้โครงสร้างใหม่ตั้งแต่บิลเดือนกันยายน 2569</p>
+<div class="grid">
+<div class="tile"><b>หน่วยที่ 1–200</b><div class="big">3.0000</div><small>บาท/หน่วย</small></div>
+<div class="tile"><b>หน่วยที่ 201–400</b><div class="big">4.1584</div><small>บาท/หน่วย</small></div>
+<div class="tile"><b>หน่วยที่ 401 ขึ้นไป</b><div class="big">4.3583</div><small>บาท/หน่วย</small></div>
+</div>
+<div class="note" style="margin-top:14px"><b>ข้อควรจำ:</b> อัตราขั้นบันไดคิดแยกเฉพาะหน่วยในแต่ละช่วง ไม่ได้นำหน่วยทั้งหมดไปคูณอัตราขั้นสูงสุด เช่น ใช้ 250 หน่วย = 200 หน่วยแรก × 3.00 + 50 หน่วยถัดไป × 4.1584</div>
+<h3>4. วัตถุประสงค์การเรียนรู้</h3><ul><li>ทดลองปรับกำลังไฟฟ้าและระยะเวลาการใช้เครื่องใช้ไฟฟ้า</li><li>สังเกตความสัมพันธ์ระหว่างพลังงานไฟฟ้ากับค่าใช้จ่าย</li><li>วิเคราะห์กราฟและเสนอวิธีลดการใช้ไฟฟ้าอย่างเหมาะสม</li></ul>
+</section>
+<section id="lab" class="sec">
+<h2>🧪 ห้องทดลองค่าไฟแบบ Real-time</h2><p class="lead">ปรับชั่วโมงใช้งานและจำนวนวัน หรือเพิ่ม/ลดเครื่องใช้ไฟฟ้า แล้วดูแท่งพลังงาน 3D มิเตอร์ และค่าไฟประมาณการเปลี่ยนไปทันที</p>
+<div class="controls">
+<div class="control"><label><span>จำนวนวันที่ใช้</span><span><output id="daysOut">30</output> วัน</span></label><input id="days" type="range" min="1" max="31" value="30"></div>
+<div class="control"><label><span>ค่า Ft</span><span><output id="ftOut">0.1623</output> บาท/หน่วย</span></label><input id="ft" type="range" min="-0.5" max="1" step="0.0001" value="0.1623"></div>
+</div>
+<h3>เลือกเครื่องใช้ไฟฟ้าและปรับชั่วโมงใช้งานต่อวัน</h3><div id="appliances"></div>
+<div class="grid" style="margin-top:15px">
+<div class="tile"><span class="pill">พลังงานรวม</span><div class="result"><span id="units">0</span> หน่วย</div><small>kWh ต่อรอบทดลอง</small></div>
+<div class="tile"><span class="pill">ค่าไฟประมาณการ</span><div class="result">฿<span id="bill">0.00</span></div><small>รวมค่าบริการ Ft และ VAT</small></div>
+</div>
+<h3>ภาพแสดงการใช้พลังงาน</h3><div class="bar"><span id="energyBar"></span></div><p class="legend">แถบพลังงานจะเพิ่มขึ้นตามหน่วยไฟฟ้าที่ใช้ (เทียบกับ 500 หน่วย)</p>
+<h3>กราฟเปรียบเทียบพลังงานรายเครื่อง</h3><canvas id="chart" class="chart" aria-label="กราฟพลังงานไฟฟ้ารายเครื่อง"></canvas>
+<h3>รายละเอียดการคำนวณ</h3><div id="breakdown" class="tile"></div>
+<div class="note" style="margin-top:12px">แบบจำลองนี้ใช้ตัวอย่างอัตราบ้านอยู่อาศัยประเภท 1.2: ค่าพลังงานขั้นบันได 3.0000 / 4.1584 / 4.3583 บาทต่อหน่วย, ค่า Ft เริ่มต้น 0.1623 บาทต่อหน่วย และค่าบริการตัวอย่าง 24.62 บาทต่อเดือน อัตราจริงขึ้นกับประเภทผู้ใช้ไฟ รอบบิล และประกาศล่าสุด ผลนี้เป็นค่าประมาณเพื่อการเรียนรู้ ไม่ใช่ใบแจ้งค่าไฟจริง</div>
+</section>
+<section id="game" class="sec">
+<h2>🧩 เกมจับคู่ความรู้ 10 ข้อ</h2><p class="lead">ลากบัตรคำไปวางในช่องคำตอบ หรือแตะบัตรคำแล้วแตะช่องว่างเพื่อใช้งานบนหน้าจอสัมผัส</p>
+<div id="gameBank" class="chips"></div><div id="gameQuestions"></div><button class="action" id="checkGame">ตรวจคำตอบ</button> <button class="action secondary" id="resetGame">เริ่มเกมใหม่</button><div id="gameResult" class="feedback"></div>
+</section>
+<section id="quiz" class="sec">
+<h2>🏆 แบบทดสอบปรนัย 5 ข้อ</h2><p class="lead">เลือกคำตอบที่ถูกต้องที่สุด เมื่อตอบครบแล้วกดส่งคำตอบเพื่อดูคะแนนและเฉลย</p><div id="quizQuestions"></div><button class="action" id="submitQuiz">ส่งคำตอบ</button> <button class="action secondary" id="resetQuiz">ทำอีกครั้ง</button><div id="quizResult" class="feedback"></div>
+</section>
+<div class="footer"><b>แหล่งข้อมูลและหมายเหตุความถูกต้อง</b><br>
+อัตราค่าไฟบ้านอยู่อาศัยใหม่เริ่มใช้เดือนกันยายน 2569 อ้างอิงข้อมูลการไฟฟ้าส่วนภูมิภาค (PEA), การไฟฟ้านครหลวง (MEA) และสำนักงานคณะกรรมการกำกับกิจการพลังงาน (กกพ.) ค่า Ft และค่าบริการอาจเปลี่ยนตามงวด/ประเภทผู้ใช้ไฟ จึงควรตรวจสอบใบแจ้งค่าไฟจริงเสมอ<br>
+<a href="https://www.pea.co.th/news/corporate-news/2412" target="_blank" rel="noopener">PEA: อัตราบ้านอยู่อาศัย ก.ย. 2569</a> · <a href="https://awspoc-www.mea.or.th/our-services/mea-service/e-service/electric-monthly-calculate" target="_blank" rel="noopener">MEA: เครื่องคำนวณค่าไฟ</a> · <a href="https://www.erc.or.th/th/tariff/1288" target="_blank" rel="noopener">กกพ.: อัตราค่าบริการพลังงาน</a><br>
+สื่อการเรียนรู้ระดับชั้นมัธยมศึกษาปีที่ 3 | ใช้งานได้บนคอมพิวเตอร์ แท็บเล็ต และโทรศัพท์มือถือ
+</div>
+</div>
+</aside>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const FONT='"Noto Sans Thai","Sarabun","Segoe UI",system-ui,sans-serif';
+const items=[
+{n:'หลอดไฟ LED',e:'💡',w:10,h:5,c:'#ffd45c',d:'หลอดไฟ LED เปลี่ยนพลังงานไฟฟ้าเป็นแสงได้อย่างมีประสิทธิภาพ ใช้กำลังไฟฟ้าต่ำกว่าหลอดไส้มาก',t:'ปิดไฟเมื่อไม่ได้ใช้งาน และเลือกหลอดที่มีฉลากประหยัดไฟ'},
+{n:'พัดลม',e:'🌀',w:60,h:8,c:'#25c6d6',d:'พัดลมใช้มอเตอร์ไฟฟ้าหมุนใบพัด กำลังไฟฟ้าไม่สูง แต่มักเปิดนานหลายชั่วโมงต่อวัน',t:'ปิดพัดลมเมื่อออกจากห้อง และทำความสะอาดใบพัดสม่ำเสมอ'},
+{n:'โทรทัศน์',e:'📺',w:100,h:4,c:'#ff6fae',d:'โทรทัศน์เปลี่ยนพลังงานไฟฟ้าเป็นแสงและเสียง ยิ่งจอใหญ่และสว่างมาก ยิ่งใช้พลังงานมากขึ้น',t:'ลดความสว่างหน้าจอ และปิดเครื่องแทนการเปิดทิ้งไว้'},
+{n:'ตู้เย็น',e:'🧊',w:150,h:24,c:'#2ed3a0',d:'ตู้เย็นเสียบปลั๊กตลอด 24 ชั่วโมง คอมเพรสเซอร์สลับทำงานเพื่อรักษาความเย็นภายในตู้',t:'ไม่เปิดประตูนานเกินจำเป็น และไม่ใส่อาหารร้อนเข้าไปโดยตรง'},
+{n:'เครื่องปรับอากาศ',e:'❄️',w:1000,h:6,c:'#9272e8',d:'เครื่องปรับอากาศใช้กำลังไฟฟ้าสูงมาก มักเป็นเครื่องใช้ไฟฟ้าที่ทำให้ค่าไฟสูงที่สุดในบ้าน',t:'ตั้งอุณหภูมิ 25–26 °C ล้างแอร์สม่ำเสมอ และปิดประตูหน้าต่างให้สนิท'},
+{n:'หม้อหุงข้าว',e:'🍚',w:700,h:1,c:'#f3b83f',d:'หม้อหุงข้าวใช้กำลังไฟฟ้าสูงแต่ใช้เวลาสั้น พลังงานรวมจึงขึ้นกับจำนวนครั้งที่หุงในแต่ละวัน',t:'หุงข้าวตามปริมาณที่ต้องการ และถอดปลั๊กเมื่อไม่ใช้งาน'}
+];
+const METER=6;
+const S={units:0,total:0,vals:items.map(()=>0),tier:{a:0,b:0,c:0,energy:0},ftCost:0,vat:0,service:24.62,ft:0.1623,days:30};
+let sel=-1,goal=null,lastVals=items.map(()=>0);
+const fmt=(n,d)=>Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+
+const canvas=$('gl'),stage=$('stage');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.setClearColor(0x000000,0);
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.15;
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(45,1,.1,300);
+const HOME={pos:new THREE.Vector3(12.5,10,16),tgt:new THREE.Vector3(0,1.2,0)};
+camera.position.copy(HOME.pos);
+const controls=new THREE.OrbitControls(camera,canvas);
+controls.target.copy(HOME.tgt);
+controls.enableDamping=true;
+controls.dampingFactor=.07;
+controls.minDistance=5;
+controls.maxDistance=34;
+controls.minPolarAngle=.12;
+controls.maxPolarAngle=Math.PI*.495;
+controls.autoRotateSpeed=1.1;
+controls.screenSpacePanning=true;
+controls.addEventListener('start',()=>{goal=null});
+controls.update();
+
+scene.add(new THREE.HemisphereLight(0xbcd0ff,0x1a2250,.75));
+const sun=new THREE.DirectionalLight(0xffffff,1.15);
+sun.position.set(9,15,7);
+sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.left=-13;sun.shadow.camera.right=13;sun.shadow.camera.top=13;sun.shadow.camera.bottom=-13;
+sun.shadow.camera.near=1;sun.shadow.camera.far=45;
+sun.shadow.bias=-.0004;
+sun.shadow.radius=3;
+scene.add(sun);
+const rimA=new THREE.PointLight(0x4d7cff,1.4,40,2);rimA.position.set(-11,7,-8);scene.add(rimA);
+const rimB=new THREE.PointLight(0xff6fae,1.1,40,2);rimB.position.set(10,5,-11);scene.add(rimB);
+
+function M(color,o){return new THREE.MeshStandardMaterial(Object.assign({color:color,roughness:.5,metalness:.1},o||{}))}
+function mesh(g,m,x,y,z){const o=new THREE.Mesh(g,m);o.position.set(x||0,y||0,z||0);o.castShadow=true;o.receiveShadow=true;return o}
+function rr(x,a,b,w,h,r){x.beginPath();x.moveTo(a+r,b);x.arcTo(a+w,b,a+w,b+h,r);x.arcTo(a+w,b+h,a,b+h,r);x.arcTo(a,b+h,a,b,r);x.arcTo(a,b,a+w,b,r);x.closePath()}
+
+const platform=mesh(new THREE.CylinderGeometry(9,9,.5,96),M(0x17235a,{roughness:.45,metalness:.35}),0,-.25,0);
+platform.castShadow=false;
+scene.add(platform);
+const base2=mesh(new THREE.CylinderGeometry(10.6,10.9,.4,96),M(0x0c1340,{roughness:.6,metalness:.4}),0,-.7,0);
+base2.castShadow=false;
+scene.add(base2);
+const edge=new THREE.Mesh(new THREE.TorusGeometry(9,.07,12,128),new THREE.MeshBasicMaterial({color:0x25c6d6}));
+edge.rotation.x=Math.PI/2;
+scene.add(edge);
+[2.7,4.4,7.3].forEach((r,i)=>{
+const ring=new THREE.Mesh(new THREE.RingGeometry(r-.025,r+.025,128),new THREE.MeshBasicMaterial({color:i===1?0xff6fae:0x7ea2ff,transparent:true,opacity:.3,side:THREE.DoubleSide}));
+ring.rotation.x=-Math.PI/2;ring.position.y=.01;scene.add(ring)
+});
+
+const starGeo=new THREE.BufferGeometry(),sp=[];
+for(let i=0;i<500;i++){const u=Math.random()*Math.PI*2,v=Math.acos(2*Math.random()-1),r=70+Math.random()*30;sp.push(r*Math.sin(v)*Math.cos(u),Math.abs(r*Math.cos(v))*.8+4,r*Math.sin(v)*Math.sin(u))}
+starGeo.setAttribute('position',new THREE.Float32BufferAttribute(sp,3));
+scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xcfdcff,size:.5,sizeAttenuation:true,transparent:true,opacity:.8})));
+const dustGeo=new THREE.BufferGeometry(),dp=[];
+for(let i=0;i<260;i++){const a=Math.random()*Math.PI*2,r=Math.random()*15;dp.push(Math.cos(a)*r,Math.random()*11+.3,Math.sin(a)*r)}
+dustGeo.setAttribute('position',new THREE.Float32BufferAttribute(dp,3));
+const dust=new THREE.Points(dustGeo,new THREE.PointsMaterial({color:0x8fb2ff,size:.09,transparent:true,opacity:.55,depthWrite:false}));
+scene.add(dust);
+
+const R=6.3;
+const ang=i=>i*Math.PI/3+Math.PI/6;
+const rigs=[];
+
+function buildLED(){
+const g=new THREE.Group();
+g.add(mesh(new THREE.CylinderGeometry(.9,1.05,.2,40),M(0x2b3a7a,{metalness:.5,roughness:.35}),0,.1,0));
+g.add(mesh(new THREE.CylinderGeometry(.12,.12,1.7,16),M(0x9aa8d8,{metalness:.7,roughness:.3}),0,1.05,0));
+g.add(mesh(new THREE.CylinderGeometry(.4,.3,.55,28),M(0xc9d3f2,{metalness:.6,roughness:.3}),0,2.05,0));
+const bm=M(0xfff2c4,{emissive:0xffc93c,emissiveIntensity:1,roughness:.2});
+const bulb=mesh(new THREE.SphereGeometry(.66,40,28),bm,0,2.95,0);
+bulb.castShadow=false;g.add(bulb);
+const light=new THREE.PointLight(0xffd980,1.5,10,2);
+light.position.set(0,2.95,0);g.add(light);
+return {group:g,anchor:4.2,glow:[bm],light:light,lightMax:2.6,tick:function(){}}
+}
+
+function buildFan(){
+const g=new THREE.Group();
+g.add(mesh(new THREE.CylinderGeometry(1.1,1.25,.22,40),M(0x2b3a7a,{metalness:.5,roughness:.35}),0,.11,0));
+g.add(mesh(new THREE.CylinderGeometry(.11,.11,2.7,16),M(0xaebbe8,{metalness:.7,roughness:.3}),0,1.55,0));
+const mg=new THREE.CylinderGeometry(.38,.38,.75,28);mg.rotateX(Math.PI/2);
+g.add(mesh(mg,M(0xdde5ff,{metalness:.5,roughness:.3}),0,3.05,0));
+const blades=new THREE.Group();blades.position.set(0,3.05,.5);
+const bmat=M(0x7fdcff,{transparent:true,opacity:.88,emissive:0x1a8fb0,emissiveIntensity:.35,roughness:.3});
+for(let i=0;i<3;i++){const p=new THREE.Group();p.rotation.z=i*Math.PI*2/3;const b=mesh(new THREE.BoxGeometry(.46,1.35,.05),bmat,0,.8,0);b.castShadow=true;p.add(b);blades.add(p)}
+const hub=mesh(new THREE.SphereGeometry(.24,24,16),M(0xdde5ff,{metalness:.6,roughness:.25}),0,0,.05);
+blades.add(hub);
+g.add(blades);
+const cage=mesh(new THREE.TorusGeometry(1.55,.04,10,64),M(0xc9d3f2,{metalness:.8,roughness:.25}),0,3.05,.62);
+cage.castShadow=false;g.add(cage);
+const cage2=mesh(new THREE.TorusGeometry(.8,.025,8,48),M(0xc9d3f2,{metalness:.8,roughness:.25}),0,3.05,.62);
+cage2.castShadow=false;g.add(cage2);
+const rig={group:g,anchor:5.2,glow:[bmat],v:0,tick:function(dt,t,on,k){const target=on?3+10*k:0;this.v+=(target-this.v)*Math.min(1,dt*2.2);blades.rotation.z-=this.v*dt}};
+return rig
+}
+
+function buildTV(){
+const g=new THREE.Group();
+g.add(mesh(new THREE.BoxGeometry(2,.14,1),M(0x1b2552,{metalness:.5,roughness:.35}),0,.07,0));
+g.add(mesh(new THREE.BoxGeometry(.34,.95,.24),M(0x1b2552,{metalness:.5,roughness:.35}),0,.6,0));
+g.add(mesh(new THREE.BoxGeometry(3.7,2.2,.2),M(0x0b1030,{metalness:.6,roughness:.3}),0,2.15,0));
+const cv=document.createElement('canvas');cv.width=512;cv.height=256;
+const cx=cv.getContext('2d');
+const gr=cx.createLinearGradient(0,0,512,0);
+[0,60,120,180,240,300,360].forEach(h=>gr.addColorStop(h/360,'hsl('+h+',85%,58%)'));
+cx.fillStyle=gr;cx.fillRect(0,0,512,256);
+const gv=cx.createLinearGradient(0,0,0,256);
+gv.addColorStop(0,'rgba(0,0,30,.0)');gv.addColorStop(1,'rgba(0,0,30,.55)');
+cx.fillStyle=gv;cx.fillRect(0,0,512,256);
+cx.fillStyle='rgba(255,255,255,.75)';
+for(let i=0;i<5;i++){cx.beginPath();cx.arc(60+i*100,70+((i*37)%60),26+(i%3)*8,0,Math.PI*2);cx.fill()}
+const tex=new THREE.CanvasTexture(cv);
+tex.wrapS=THREE.RepeatWrapping;tex.encoding=THREE.sRGBEncoding;
+const sm=new THREE.MeshStandardMaterial({map:tex,emissive:0xffffff,emissiveMap:tex,emissiveIntensity:1,roughness:.25});
+const scr=new THREE.Mesh(new THREE.PlaneGeometry(3.4,1.9),sm);
+scr.position.set(0,2.15,.11);g.add(scr);
+const rig={group:g,anchor:4.0,glow:[sm],tick:function(dt,t,on){if(on)tex.offset.x+=dt*.08}};
+return rig
+}
+
+function buildFridge(){
+const g=new THREE.Group();
+g.add(mesh(new THREE.BoxGeometry(2,3.8,1.6),M(0xe8eefc,{metalness:.35,roughness:.28}),0,1.9,0));
+g.add(mesh(new THREE.BoxGeometry(2.02,.05,.04),M(0x56628f),0,1.25,.8));
+g.add(mesh(new THREE.BoxGeometry(.08,1,.12),M(0x8b97c4,{metalness:.8,roughness:.25}),.72,2.65,.84));
+g.add(mesh(new THREE.BoxGeometry(.08,.7,.12),M(0x8b97c4,{metalness:.8,roughness:.25}),.72,.78,.84));
+const gm=M(0x7ff3ff,{emissive:0x25c6d6,emissiveIntensity:1});
+const strip=mesh(new THREE.BoxGeometry(.06,.9,.03),gm,-.7,3.0,.81);strip.castShadow=false;g.add(strip);
+return {group:g,anchor:4.8,glow:[gm],tick:function(){}}
+}
+
+function buildAC(){
+const g=new THREE.Group();
+g.add(mesh(new THREE.BoxGeometry(4.6,4.8,.25),M(0x232f66,{metalness:.3,roughness:.5}),0,2.4,-.35));
+g.add(mesh(new THREE.BoxGeometry(4.6,.2,1),M(0x1a2352),0,.1,-.05));
+g.add(mesh(new THREE.BoxGeometry(3.8,1.2,1.05),M(0xf2f5ff,{metalness:.2,roughness:.3}),0,3.7,.2));
+g.add(mesh(new THREE.BoxGeometry(3.4,.16,.1),M(0x2a355f),0,3.2,.76));
+for(let i=0;i<4;i++)g.add(mesh(new THREE.BoxGeometry(3.4,.035,.06),M(0x8a96c4),0,3.45+i*.15,.74));
+const gm=M(0x6dffb8,{emissive:0x21d98a,emissiveIntensity:1});
+const led=mesh(new THREE.BoxGeometry(.4,.1,.03),gm,1.4,4.05,.73);led.castShadow=false;g.add(led);
+const n=60,geo=new THREE.BufferGeometry(),pos=new Float32Array(n*3);
+for(let i=0;i<n;i++){pos[i*3]=(Math.random()-.5)*3.2;pos[i*3+1]=Math.random()*2.6+.4;pos[i*3+2]=.9+Math.random()*.9}
+geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+const pts=new THREE.Points(geo,new THREE.PointsMaterial({color:0xa6ecff,size:.14,transparent:true,opacity:.85,depthWrite:false}));
+g.add(pts);
+const rig={group:g,anchor:5.6,glow:[gm],tick:function(dt,t,on,k){pts.visible=on;if(!on)return;const a=geo.attributes.position;for(let i=0;i<n;i++){let y=a.getY(i)-dt*(.9+k*1.2);if(y<.3){y=3.1;a.setX(i,(Math.random()-.5)*3.2)}a.setY(i,y)}a.needsUpdate=true}};
+return rig
+}
+
+function buildCooker(){
+const g=new THREE.Group();
+g.add(mesh(new THREE.CylinderGeometry(1.15,1.25,.22,44),M(0x1b2552,{metalness:.5,roughness:.35}),0,.11,0));
+g.add(mesh(new THREE.CylinderGeometry(1.1,1.18,1.2,48),M(0xf4f6ff,{metalness:.25,roughness:.3}),0,.82,0));
+const lid=mesh(new THREE.SphereGeometry(1.1,48,18,0,Math.PI*2,0,Math.PI/2),M(0xdfe6ff,{metalness:.3,roughness:.28}),0,1.42,0);
+lid.scale.set(1,.55,1);g.add(lid);
+g.add(mesh(new THREE.SphereGeometry(.17,20,14),M(0x2b3a7a,{metalness:.5,roughness:.3}),0,2.05,0));
+const ig=new THREE.CylinderGeometry(.13,.13,.07,24);ig.rotateX(Math.PI/2);
+const gm=M(0xffc066,{emissive:0xff8a1f,emissiveIntensity:1});
+const ind=mesh(ig,gm,0,.85,1.15);ind.castShadow=false;g.add(ind);
+const steam=[];
+for(let i=0;i<4;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.22+i*.03,16,12),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0,depthWrite:false}));m.userData.off=i/4;m.userData.dx=(i%2?1:-1)*.2*(i+1)*.3;steam.push(m);g.add(m)}
+const rig={group:g,anchor:3.6,glow:[gm],tick:function(dt,t,on){steam.forEach(function(m){if(!on){m.material.opacity=0;return}const p=(t*.45+m.userData.off)%1;m.position.set(m.userData.dx*p*2,2.2+p*1.5,0);m.scale.setScalar(.7+p*1.2);m.material.opacity=(1-p)*.45})}};
+return rig
+}
+
+const builders=[buildLED,buildFan,buildTV,buildFridge,buildAC,buildCooker];
+const bars=[],labels=[],labelCanv=[],labelTex=[],flows=[];
+
+builders.forEach((b,i)=>{
+const rig=b();
+const a=ang(i);
+rig.group.position.set(Math.cos(a)*R,0,Math.sin(a)*R);
+rig.group.lookAt(0,0,0);
+rig.group.userData.idx=i;
+rig.e=.05;rig.l=0;
+scene.add(rig.group);
+rigs.push(rig);
+const col=new THREE.Color(items[i].c);
+const bm=new THREE.MeshStandardMaterial({color:col,emissive:col,emissiveIntensity:.35,roughness:.3,metalness:.25,transparent:true,opacity:.92});
+const bar=new THREE.Mesh(new THREE.BoxGeometry(.85,1,.85),bm);
+bar.castShadow=true;bar.receiveShadow=true;
+const ba=a+.34;
+bar.position.set(Math.cos(ba)*3.55,.04,Math.sin(ba)*3.55);
+bar.scale.y=.08;bar.userData.cur=.08;bar.userData.tgt=.08;bar.userData.idx=i;
+scene.add(bar);bars.push(bar);
+const lc=document.createElement('canvas');lc.width=256;lc.height=128;
+const lt=new THREE.CanvasTexture(lc);lt.encoding=THREE.sRGBEncoding;
+const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:lt,transparent:true,depthWrite:false}));
+sp.scale.set(2.5,1.25,1);
+sp.position.set(bar.position.x,1.2,bar.position.z);
+scene.add(sp);
+labels.push(sp);labelCanv.push(lc);labelTex.push(lt);
+const p0=new THREE.Vector3(Math.cos(a)*(R-1.1),.07,Math.sin(a)*(R-1.1));
+const p1=new THREE.Vector3(Math.cos(a)*1.9,.07,Math.sin(a)*1.9);
+const line=new THREE.Line(new THREE.BufferGeometry().setFromPoints([p0,p1]),new THREE.LineBasicMaterial({color:col,transparent:true,opacity:.35}));
+scene.add(line);
+const pulses=[];
+for(let k=0;k<3;k++){const m=new THREE.Mesh(new THREE.SphereGeometry(.14,14,10),new THREE.MeshBasicMaterial({color:col}));m.visible=false;scene.add(m);pulses.push(m)}
+flows.push({p0:p0,p1:p1,pulses:pulses,line:line});
+});
+
+const meterPivot=new THREE.Group();
+meterPivot.userData.idx=METER;
+scene.add(meterPivot);
+meterPivot.add(mesh(new THREE.CylinderGeometry(1.75,1.9,.3,56),M(0x1b2552,{metalness:.55,roughness:.35}),0,.15,0));
+const mglow=new THREE.Mesh(new THREE.TorusGeometry(1.8,.045,10,80),new THREE.MeshBasicMaterial({color:0x25c6d6}));
+mglow.rotation.x=Math.PI/2;mglow.position.y=.32;meterPivot.add(mglow);
+meterPivot.add(mesh(new THREE.BoxGeometry(2.7,3.5,1.3),M(0xdfe6ff,{metalness:.3,roughness:.32}),0,2.05,0));
+meterPivot.add(mesh(new THREE.BoxGeometry(2.9,.2,1.5),M(0x2b3a7a,{metalness:.5,roughness:.3}),0,3.9,0));
+const mc=document.createElement('canvas');mc.width=512;mc.height=320;
+const mtex=new THREE.CanvasTexture(mc);mtex.encoding=THREE.sRGBEncoding;
+const mdisp=new THREE.Mesh(new THREE.PlaneGeometry(2.25,1.4),new THREE.MeshBasicMaterial({map:mtex}));
+mdisp.position.set(0,2.8,.66);meterPivot.add(mdisp);
+const win=new THREE.Mesh(new THREE.CircleGeometry(.62,48),new THREE.MeshStandardMaterial({color:0x0b1030,roughness:.2,metalness:.5}));
+win.position.set(0,1.2,.655);meterPivot.add(win);
+const dg=new THREE.CylinderGeometry(.5,.5,.05,56);dg.rotateX(Math.PI/2);
+const disc=mesh(dg,M(0xe6ecff,{metalness:.9,roughness:.2}),0,1.2,.7);
+const dmark=mesh(new THREE.BoxGeometry(.5,.07,.02),M(0xff4d6d),.25,0,.035);
+disc.add(dmark);meterPivot.add(disc);
+const mrig={group:meterPivot,anchor:4.9,e:1};
+let meterAngle=0;
+
+function drawMeter(){
+const x=mc.getContext('2d');
+x.clearRect(0,0,512,320);
+const g=x.createLinearGradient(0,0,512,320);
+g.addColorStop(0,'#0b1233');g.addColorStop(1,'#1b2a6e');
+rr(x,0,0,512,320,30);x.fillStyle=g;x.fill();
+x.lineWidth=4;x.strokeStyle='#25c6d6';rr(x,6,6,500,308,26);x.stroke();
+x.textAlign='center';x.textBaseline='middle';
+x.fillStyle='#9fb4ff';x.font='600 30px '+FONT;
+x.fillText('มิเตอร์ไฟฟ้า • พลังงานรวม',256,46);
+x.fillStyle='#ffffff';x.font='800 100px '+FONT;
+x.fillText(fmt(S.units,1),256,140);
+x.fillStyle='#25c6d6';x.font='700 34px '+FONT;
+x.fillText('kWh (หน่วย)',256,208);
+x.fillStyle='rgba(255,255,255,.12)';rr(x,70,240,372,56,28);x.fill();
+x.fillStyle='#4be8b5';x.font='800 38px '+FONT;
+x.fillText('฿ '+fmt(S.total,2),256,270);
+mtex.needsUpdate=true
+}
+
+function drawLabel(i){
+const c=labelCanv[i],x=c.getContext('2d'),v=S.vals[i];
+x.clearRect(0,0,256,128);
+x.fillStyle='rgba(8,13,40,.86)';rr(x,10,26,236,76,24);x.fill();
+x.lineWidth=4;x.strokeStyle=items[i].c;x.stroke();
+x.fillStyle='#ffffff';x.textAlign='center';x.textBaseline='middle';
+x.font='800 38px '+FONT;
+x.fillText(fmt(v,v>=100?0:1)+' หน่วย',128,64);
+labelTex[i].needsUpdate=true
+}
+
+const pickables=rigs.map(r=>r.group).concat([meterPivot]);
+const bursts=[];
+
+function burst(){
+const n=160,geo=new THREE.BufferGeometry(),pos=new Float32Array(n*3),col=new Float32Array(n*3),vel=[];
+for(let i=0;i<n;i++){pos[i*3]=0;pos[i*3+1]=4.4;pos[i*3+2]=0;vel.push(new THREE.Vector3((Math.random()-.5)*10,Math.random()*9+4,(Math.random()-.5)*10));const c=new THREE.Color().setHSL(Math.random(),.9,.62);col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b}
+geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+const p=new THREE.Points(geo,new THREE.PointsMaterial({size:.3,vertexColors:true,transparent:true,opacity:1,depthWrite:false}));
+scene.add(p);bursts.push({p:p,vel:vel,age:0})
+}
+
+const hotWrap=$('hotspots'),hotEls=[];
+for(let i=0;i<=METER;i++){
+const b=document.createElement('button');
+b.className='hot';b.dataset.i=i;
+b.setAttribute('aria-label',i===METER?'มิเตอร์ไฟฟ้า':items[i].n);
+b.innerHTML='<span class="dot">'+(i===METER?'🔢':items[i].e)+'</span><span class="tag">'+(i===METER?'มิเตอร์ไฟฟ้า':items[i].n)+'</span>';
+b.addEventListener('click',e=>{e.stopPropagation();select(i)});
+hotWrap.appendChild(b);hotEls.push(b)
+}
+
+const anchorVec=new THREE.Vector3();
+function updateHotspots(){
+const w=stage.clientWidth,h=stage.clientHeight;
+for(let i=0;i<=METER;i++){
+const g=i===METER?meterPivot:rigs[i].group,an=i===METER?mrig.anchor:rigs[i].anchor;
+anchorVec.set(g.position.x,an,g.position.z).project(camera);
+const el=hotEls[i];
+if(anchorVec.z>1||anchorVec.z<-1){el.style.display='none';continue}
+el.style.display='block';
+el.style.transform='translate('+((anchorVec.x*.5+.5)*w).toFixed(1)+'px,'+((-anchorVec.y*.5+.5)*h).toFixed(1)+'px) translate(-50%,-50%)'
+}
+}
+
+function focusOn(i){
+if(i===METER){goal={pos:new THREE.Vector3(5.8,5.4,9),tgt:new THREE.Vector3(0,2.2,0)};return}
+const a=ang(i),P=rigs[i].group.position,d=new THREE.Vector3(Math.cos(a),0,Math.sin(a)),tg=new THREE.Vector3(-Math.sin(a),0,Math.cos(a));
+goal={pos:P.clone().addScaledVector(tg,5.8).addScaledVector(d,-1.2).add(new THREE.Vector3(0,3.8,0)),tgt:P.clone().add(new THREE.Vector3(0,rigs[i].anchor*.45,0))}
+}
+
+const card=$('infoCard');
+function renderCard(pop){
+if(sel<0){card.hidden=true;return}
+card.hidden=false;
+let html='';
+if(sel===METER){
+$('icEmoji').textContent='🔢';$('icKicker').textContent='จุดอธิบาย • มิเตอร์';$('icTitle').textContent='มิเตอร์ไฟฟ้า';
+$('icDesc').textContent='มิเตอร์บันทึกพลังงานไฟฟ้ารวมของทุกเครื่องเป็นหน่วย (kWh) แผ่นจานหมุนเร็วขึ้นเมื่อใช้ไฟมาก ค่าไฟคิดจากหน่วยที่ใช้ตามอัตราก้าวหน้า รวมค่าบริการ Ft และ VAT 7%';
+html='<div><span>พลังงานรวม</span><b>'+fmt(S.units,2)+' หน่วย</b></div><div><span>ค่าพลังงานฐาน</span><b>฿'+fmt(S.tier.energy,2)+'</b></div><div><span>ค่า Ft</span><b>฿'+fmt(S.ftCost,2)+'</b></div><div><span>VAT 7%</span><b>฿'+fmt(S.vat,2)+'</b></div>';
+$('icStats').innerHTML=html;
+$('icBarWrap').style.display='block';
+$('icBar').style.width=Math.min(100,S.units/500*100)+'%';
+$('icTip').textContent='💡 ใช้ไฟเกิน 200 หน่วย หน่วยส่วนที่เกินจะคิดอัตราสูงขึ้น การลดการใช้ไฟจึงช่วยลดค่าไฟได้มากกว่าที่คิด'
+}else{
+const a=items[sel],kwh=S.vals[sel],share=S.units>0?kwh/S.units:0;
+$('icEmoji').textContent=a.e;$('icKicker').textContent='จุดอธิบาย • เครื่องใช้ไฟฟ้า';$('icTitle').textContent=a.n;$('icDesc').textContent=a.d;
+html='<div><span>กำลังไฟฟ้า</span><b>'+fmt(a.w,0)+' วัตต์</b></div><div><span>เวลาใช้งาน</span><b>'+fmt(a.h,1)+' ชม./วัน</b></div><div><span>พลังงานที่ใช้</span><b>'+fmt(kwh,2)+' หน่วย</b></div><div><span>ค่าไฟโดยประมาณ</span><b>฿'+fmt(S.total*share,2)+'</b></div>';
+$('icStats').innerHTML=html;
+$('icBarWrap').style.display='block';
+$('icBar').style.width=(share*100).toFixed(1)+'%';
+$('icTip').textContent='💡 สัดส่วนต่อพลังงานรวม '+fmt(share*100,1)+'% — '+a.t
+}
+if(pop){card.classList.remove('pop');void card.offsetWidth;card.classList.add('pop')}
+}
+
+function select(i){
+sel=i;
+hotEls.forEach((b,k)=>b.classList.toggle('on',k===i));
+document.querySelectorAll('.appliance').forEach(r=>r.classList.toggle('sel',+r.dataset.row===i));
+renderCard(true);
+focusOn(i)
+}
+$('closeCard').addEventListener('click',()=>{sel=-1;hotEls.forEach(b=>b.classList.remove('on'));document.querySelectorAll('.appliance').forEach(r=>r.classList.remove('sel'));renderCard(false)});
+
+$('btnReset').addEventListener('click',()=>{goal={pos:HOME.pos.clone(),tgt:HOME.tgt.clone()}});
+$('btnSpin').addEventListener('click',function(){controls.autoRotate=!controls.autoRotate;this.classList.toggle('active',controls.autoRotate)});
+$('btnHot').addEventListener('click',function(){hotWrap.classList.toggle('hidden');this.classList.toggle('active',hotWrap.classList.contains('hidden'))});
+
+const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
+function pick(e){
+const r=canvas.getBoundingClientRect();
+ndc.set(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);
+ray.setFromCamera(ndc,camera);
+const hits=ray.intersectObjects(pickables.concat(bars),true);
+for(let k=0;k<hits.length;k++){let o=hits[k].object;while(o){if(o.userData&&o.userData.idx!==undefined)return o.userData.idx;o=o.parent}}
+return -1
+}
+let downX=0,downY=0;
+canvas.addEventListener('pointerdown',e=>{downX=e.clientX;downY=e.clientY});
+canvas.addEventListener('pointerup',e=>{if(Math.hypot(e.clientX-downX,e.clientY-downY)<5){const i=pick(e);if(i>=0)select(i)}});
+canvas.addEventListener('pointermove',e=>{if(e.buttons)return;canvas.style.cursor=pick(e)>=0?'pointer':'grab'});
+
+function resize(){
+const w=Math.max(1,stage.clientWidth),h=Math.max(1,stage.clientHeight);
+renderer.setSize(w,h,false);
+camera.aspect=w/h;
+camera.fov=w/h<.9?60:45;
+camera.updateProjectionMatrix()
+}
+new ResizeObserver(resize).observe(stage);
+resize();
+
+const clock=new THREE.Clock();
+function frame(){
+requestAnimationFrame(frame);
+const dt=Math.min(clock.getDelta(),.05),t=clock.elapsedTime;
+if(goal){
+const f=1-Math.pow(.0008,dt);
+camera.position.lerp(goal.pos,f);controls.target.lerp(goal.tgt,f);
+if(camera.position.distanceTo(goal.pos)<.06&&controls.target.distanceTo(goal.tgt)<.06)goal=null
+}
+rigs.forEach((r,i)=>{
+const a=items[i],on=a.w>0&&a.h>0,k=Math.min(1,a.h/12);
+r.e+=((on?.55+.9*k:.04)-r.e)*Math.min(1,dt*4);
+r.glow.forEach(m=>{m.emissiveIntensity=r.e});
+if(r.light){r.l+=((on?r.lightMax*(.4+.6*k):0)-r.l)*Math.min(1,dt*4);r.light.intensity=r.l}
+r.tick(dt,t,on,k);
+const bar=bars[i];
+bar.userData.cur+=(bar.userData.tgt-bar.userData.cur)*Math.min(1,dt*5);
+const hh=bar.userData.cur;
+bar.scale.y=hh;bar.position.y=hh/2;
+labels[i].position.y=hh+.85;
+const fl=flows[i];
+fl.pulses.forEach((m,j)=>{
+m.visible=on;
+if(!on)return;
+const p=(t*(.18+.5*k+Math.min(.6,a.w/2500))+j/3)%1;
+m.position.lerpVectors(fl.p0,fl.p1,p);
+m.scale.setScalar(.7+Math.min(1.6,a.w/700))
+});
+fl.line.material.opacity=on?.45:.12
+});
+disc.rotation.z-=dt*(S.units>0?Math.min(14,.6+S.units/40):0);
+const want=Math.atan2(camera.position.x,camera.position.z);
+let diff=want-meterAngle;
+while(diff>Math.PI)diff-=Math.PI*2;
+while(diff<-Math.PI)diff+=Math.PI*2;
+meterAngle+=diff*Math.min(1,dt*3);
+meterPivot.rotation.y=meterAngle;
+mglow.material.color.setHSL(.5+Math.sin(t*.8)*.05,.8,.55);
+dust.rotation.y+=dt*.02;
+for(let i=bursts.length-1;i>=0;i--){
+const b=bursts[i];b.age+=dt;
+const pa=b.p.geometry.attributes.position;
+for(let j=0;j<b.vel.length;j++){b.vel[j].y-=14*dt;pa.setXYZ(j,pa.getX(j)+b.vel[j].x*dt,pa.getY(j)+b.vel[j].y*dt,pa.getZ(j)+b.vel[j].z*dt)}
+pa.needsUpdate=true;
+b.p.material.opacity=Math.max(0,1-b.age/2.6);
+if(b.age>2.6){scene.remove(b.p);b.p.geometry.dispose();b.p.material.dispose();bursts.splice(i,1)}
+}
+controls.update();
+renderer.render(scene,camera);
+updateHotspots()
+}
+
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{
+document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+document.querySelectorAll('section.sec').forEach(x=>x.classList.remove('active'));
+b.classList.add('active');$(b.dataset.tab).classList.add('active');
+if(b.dataset.tab==='lab')drawChart(lastVals)
+}));
+document.querySelectorAll('[data-focus]').forEach(b=>b.addEventListener('click',()=>{
+select(+b.dataset.focus);
+if(window.innerWidth<=1000)window.scrollTo({top:0,behavior:'smooth'})
+}));
+
+function renderItems(){
+$('appliances').innerHTML=items.map((a,i)=>'<div class="appliance" data-row="'+i+'"><button class="aname" data-pick="'+i+'"><span class="ae" style="background:'+a.c+'33">'+a.e+'</span><span><strong>'+a.n+'</strong><small>แตะเพื่อดูในฉาก 3D</small></span></button><div class="ainputs"><label>กำลังไฟฟ้า <input type="number" min="0" max="10000" step="1" value="'+a.w+'" data-w="'+i+'" aria-label="กำลังไฟฟ้าวัตต์ '+a.n+'"> วัตต์</label><label>เวลา/วัน <input type="number" min="0" max="24" step=".5" value="'+a.h+'" data-h="'+i+'" aria-label="ชั่วโมงใช้งาน '+a.n+'"> ชม.</label></div></div>').join('');
+$('appliances').querySelectorAll('[data-pick]').forEach(x=>x.addEventListener('click',()=>{select(+x.dataset.pick);if(window.innerWidth<=1000)window.scrollTo({top:0,behavior:'smooth'})}));
+$('appliances').querySelectorAll('[data-w]').forEach(x=>x.addEventListener('input',()=>{items[+x.dataset.w].w=Math.max(0,Math.min(10000,+x.value||0));calc()}));
+$('appliances').querySelectorAll('[data-h]').forEach(x=>x.addEventListener('input',()=>{items[+x.dataset.h].h=Math.max(0,Math.min(24,+x.value||0));calc()}))
+}
+
+function tier(units){
+const a=Math.min(units,200)*3,b=Math.max(0,Math.min(units-200,200))*4.1584,c=Math.max(0,units-400)*4.3583;
+return {a:a,b:b,c:c,energy:a+b+c}
+}
+
+function calc(){
+const days=+$('days').value,ft=+$('ft').value;
+const vals=items.map(a=>a.w*a.h*days/1000),u=vals.reduce((s,v)=>s+v,0),t=tier(u),service=24.62,ftCost=u*ft,base=t.energy+service,vat=(base+ftCost)*.07,total=base+ftCost+vat;
+S.units=u;S.total=total;S.vals=vals;S.tier=t;S.ftCost=ftCost;S.vat=vat;S.days=days;S.ft=ft;lastVals=vals;
+$('daysOut').textContent=days;$('ftOut').textContent=ft.toFixed(4);
+$('units').textContent=u.toFixed(2);$('bill').textContent=total.toFixed(2);
+$('hudUnits').textContent=fmt(u,1);$('hudBill').textContent=fmt(total,2);
+$('energyBar').style.width=Math.min(100,u/500*100)+'%';
+$('breakdown').innerHTML='<b>ค่าพลังงานไฟฟ้าฐาน</b> '+t.energy.toFixed(2)+' บาท<br>• 1–200 หน่วย: '+t.a.toFixed(2)+' บาท<br>• 201–400 หน่วย: '+t.b.toFixed(2)+' บาท<br>• 401 หน่วยขึ้นไป: '+t.c.toFixed(2)+' บาท<br><b>ค่าบริการตัวอย่าง</b> '+service.toFixed(2)+' บาท<br><b>ค่า Ft</b> '+u.toFixed(2)+' × '+ft.toFixed(4)+' = '+ftCost.toFixed(2)+' บาท<br><b>VAT 7%</b> '+vat.toFixed(2)+' บาท<hr><b>รวมประมาณการ '+total.toFixed(2)+' บาท</b>';
+vals.forEach((v,i)=>{bars[i].userData.tgt=Math.min(7,Math.max(.08,v*.025));drawLabel(i)});
+drawMeter();
+if(sel>=0)renderCard(false);
+drawChart(vals)
+}
+
+function drawChart(vals){
+const c=$('chart');if(!c||!vals)return;
+const dpr=window.devicePixelRatio||1,w=c.clientWidth,h=c.clientHeight;
+if(!w||!h)return;
+c.width=w*dpr;c.height=h*dpr;
+const x=c.getContext('2d');
+x.setTransform(1,0,0,1,0,0);x.scale(dpr,dpr);x.clearRect(0,0,w,h);
+const max=Math.max(1,...vals)*1.2,left=38,bottom=h-35,top=18,gap=(w-55)/vals.length,barW=Math.max(12,gap*.55);
+x.strokeStyle='rgba(255,255,255,.12)';x.fillStyle='#9fabd6';x.font='11px '+FONT;x.textAlign='left';
+for(let j=0;j<4;j++){const y=bottom-(bottom-top)*j/3;x.beginPath();x.moveTo(left,y);x.lineTo(w-8,y);x.stroke();x.fillText((max*j/3).toFixed(1),3,y+4)}
+vals.forEach((v,i)=>{
+const bh=(bottom-top)*v/max,bx=left+i*gap+gap*.2;
+x.fillStyle=items[i].c;x.fillRect(bx,bottom-bh,barW,bh);
+x.fillStyle='#dfe6ff';x.textAlign='center';
+x.fillText(items[i].n.slice(0,7),bx+barW/2,bottom+15);
+x.fillText(v.toFixed(1),bx+barW/2,bottom-bh-5)
+});
+x.textAlign='left'
+}
+
+$('days').addEventListener('input',calc);
+$('ft').addEventListener('input',calc);
+renderItems();
+calc();
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{vals_redraw()});
+function vals_redraw(){S.vals.forEach((v,i)=>drawLabel(i));drawMeter()}
+
+const pairs=[['หน่วยไฟฟ้า','กิโลวัตต์-ชั่วโมง (kWh)'],['กำลังไฟฟ้ามีหน่วยเป็น','วัตต์ (W)'],['พลังงานไฟฟ้า (หน่วย)','วัตต์ × ชั่วโมง ÷ 1,000'],['ค่า Ft','ค่าไฟฟ้าผันแปร'],['VAT','ภาษีมูลค่าเพิ่ม'],['มิเตอร์ไฟฟ้า','วัดพลังงานไฟฟ้าที่ใช้'],['ใช้ไฟมากขึ้น','พลังงานไฟฟ้ามักเพิ่มขึ้น'],['LED','หลอดไฟประหยัดพลังงาน'],['ปิดไฟเมื่อไม่ใช้','ช่วยลดการใช้พลังงาน'],['อัตราก้าวหน้า','คิดราคาตามช่วงหน่วยไฟฟ้า']];
+let selected=null,gameAnswers={};
+function markUsed(){
+const used=Object.values(gameAnswers);
+document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('used',used.includes(c.dataset.answer)))
+}
+function initGame(){
+selected=null;gameAnswers={};
+const opts=[...pairs.map(p=>p[1])].sort(()=>Math.random()-.5);
+$('gameBank').innerHTML=opts.map((o,i)=>'<span class="chip" draggable="true" data-answer="'+o.replaceAll('"','&quot;')+'" id="chip'+i+'">'+o+'</span>').join('');
+$('gameQuestions').innerHTML=pairs.map((p,i)=>'<div class="quizitem"><b>'+(i+1)+'. '+p[0]+'</b><div class="drop" data-q="'+i+'" tabindex="0">ลากคำตอบมาวางที่นี่ หรือแตะเพื่อเลือกคำตอบ</div></div>').join('');
+document.querySelectorAll('.chip').forEach(ch=>{
+ch.addEventListener('dragstart',e=>e.dataTransfer.setData('text/plain',ch.dataset.answer));
+ch.addEventListener('click',()=>{document.querySelectorAll('.chip').forEach(c=>c.classList.remove('selected'));ch.classList.add('selected');selected=ch.dataset.answer})
+});
+document.querySelectorAll('.drop').forEach(d=>{
+d.addEventListener('dragover',e=>e.preventDefault());
+d.addEventListener('drop',e=>{e.preventDefault();put(+d.dataset.q,e.dataTransfer.getData('text/plain'))});
+d.addEventListener('click',()=>{if(selected)put(+d.dataset.q,selected)});
+d.addEventListener('keydown',e=>{if(e.key==='Enter'&&selected)put(+d.dataset.q,selected)})
+});
+$('gameResult').textContent=''
+}
+function put(i,a){
+gameAnswers[i]=a;
+const d=document.querySelector('.drop[data-q="'+i+'"]');
+d.textContent=a;d.style.borderStyle='solid';d.style.background='rgba(77,124,255,.2)';
+selected=null;
+document.querySelectorAll('.chip').forEach(c=>c.classList.remove('selected'));
+markUsed()
+}
+$('checkGame').onclick=()=>{
+let score=0;
+pairs.forEach((p,i)=>{
+const d=document.querySelector('.drop[data-q="'+i+'"]'),ok=gameAnswers[i]===p[1];
+if(ok)score++;
+d.innerHTML=(gameAnswers[i]||'ยังไม่ได้ตอบ')+'<div class="feedback '+(ok?'correct':'wrong')+'">'+(ok?'✓ ถูกต้อง':'✗ เฉลย: '+p[1])+'</div>'
+});
+$('gameResult').innerHTML='ได้ '+score+' / 10 คะแนน '+(score===10?'ยอดเยี่ยมมาก! 🎉':'ลองทบทวนคำตอบที่เฉลยแล้วเล่นอีกครั้ง');
+if(score===10)burst()
+};
+$('resetGame').onclick=initGame;
+initGame();
+
+const qs=[
+{q:'เครื่องใช้ไฟฟ้ากำลัง 1,000 วัตต์ เปิด 2 ชั่วโมง ใช้พลังงานเท่าใด?',o:['0.5 หน่วย','2 หน่วย','20 หน่วย','200 หน่วย'],a:1,e:'1,000 × 2 ÷ 1,000 = 2 kWh'},
+{q:'หลอดไฟ 20 W เปิดวันละ 5 ชั่วโมง 10 วัน ใช้ไฟกี่หน่วย?',o:['0.1','1','10','100'],a:1,e:'20 × 5 × 10 ÷ 1,000 = 1 kWh'},
+{q:'ค่า Ft มีลักษณะอย่างไร?',o:['คงที่ตลอดไป','เป็นค่าไฟฟ้าผันแปรตามงวด','เป็นภาษี','เป็นจำนวนหน่วยไฟ'],a:1,e:'ค่า Ft ปรับเปลี่ยนได้ตามต้นทุนและประกาศในแต่ละงวด'},
+{q:'หากใช้ไฟ 250 หน่วย ตามตัวอย่างอัตรา 1.2 ค่าพลังงานฐานเท่าใด?',o:['750.00 บาท','800.00 บาท','807.92 บาท','1,039.60 บาท'],a:2,e:'200 × 3.00 + 50 × 4.1584 = 807.92 บาท'},
+{q:'วิธีใดช่วยลดค่าไฟได้เหมาะสมที่สุด?',o:['เปิดแอร์ทิ้งไว้','ปิดเครื่องใช้ไฟฟ้าเมื่อไม่ใช้งาน','เปิดไฟทุกห้อง','เปิดตู้เย็นค้างไว้'],a:1,e:'การปิดเครื่องใช้ไฟฟ้าที่ไม่จำเป็นช่วยลดพลังงานที่ใช้'}
+];
+function initQuiz(){
+$('quizQuestions').innerHTML=qs.map((q,i)=>'<div class="quizitem"><b>'+(i+1)+'. '+q.q+'</b>'+q.o.map((o,j)=>'<label class="opt"><input type="radio" name="q'+i+'" value="'+j+'"> '+o+'</label>').join('')+'<div id="ex'+i+'"></div></div>').join('');
+$('quizResult').textContent=''
+}
+$('submitQuiz').onclick=()=>{
+let score=0,answered=0;
+qs.forEach((q,i)=>{
+const v=document.querySelector('input[name=q'+i+']:checked'),el=$('ex'+i);
+if(v){answered++;if(+v.value===q.a)score++}
+el.innerHTML='<div class="feedback '+(v&&+v.value===q.a?'correct':'wrong')+'">'+(v&&+v.value===q.a?'✓ ถูกต้อง':'เฉลย: '+q.o[q.a])+' — '+q.e+'</div>'
+});
+$('quizResult').textContent='คะแนน '+score+'/5 (ตอบ '+answered+'/5 ข้อ)'+(score===5?' 🎉':'');
+if(score===5)burst()
+};
+$('resetQuiz').onclick=initQuiz;
+initQuiz();
+window.addEventListener('resize',()=>drawChart(lastVals));
+frame();
+</script>
+</body>
+</html>
